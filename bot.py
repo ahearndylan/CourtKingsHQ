@@ -1,19 +1,17 @@
 import tweepy
 from nba_api.stats.endpoints import boxscoretraditionalv2, scoreboardv2
-from nba_api.stats.library.http import NBAStatsHTTP
-from datetime import datetime, timedelta, timezone
+from nba_api.stats.library.parameters import SeasonTypeAllStar
+from datetime import datetime
 import time
-import os
-import requests
 
 # ======================= #
 # TWITTER AUTHENTICATION  #
 # ======================= #
-bearer_token = os.getenv("BEARER_TOKEN")
-api_key = os.getenv("API_KEY")
-api_secret = os.getenv("API_SECRET")
-access_token = os.getenv("ACCESS_TOKEN")
-access_token_secret = os.getenv("ACCESS_TOKEN_SECRET")
+bearer_token = "AAAAAAAAAAAAAAAAAAAAAPztzwEAAAAAvBGCjApPNyqj9c%2BG7740SkkTShs%3DTCpOQ0DMncSMhaW0OA4UTPZrPRx3BHjIxFPzRyeoyMs2KHk6hM"
+api_key = "uKyGoDr5LQbLvu9i7pgFrAnBr"
+api_secret = "KGBVtj1BUmAEsyoTmZhz67953ItQ8TIDcChSpodXV8uGMPXsoH"
+access_token = "1901441558596988929-WMdEPOtNDj7QTJgLHVylxnylI9ObgD"
+access_token_secret = "9sf83R8A0MBdijPdns6nWaG7HF47htcWo6oONPmMS7o98"
 
 client = tweepy.Client(
     bearer_token=bearer_token,
@@ -24,39 +22,16 @@ client = tweepy.Client(
 )
 
 # ======================= #
-#   NBA API HEADER FIX    #
-# ======================= #
-NBAStatsHTTP.headers = {
-    'User-Agent': 'Mozilla/5.0',
-    'x-nba-stats-origin': 'stats',
-    'x-nba-stats-token': 'true',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Accept-Language': 'en',
-    'Origin': 'https://www.nba.com',
-    'Referer': 'https://www.nba.com/'
-}
-
-# ======================= #
 #     NBA STATS LOGIC     #
 # ======================= #
 
-def get_nba_game_date_str():
-    # Automatically use yesterday's date (adjusted for EST)
-    est_now = datetime.now(timezone.utc) - timedelta(hours=5)
-    nba_date = est_now - timedelta(days=1)
-    return nba_date.strftime("%m/%d/%Y")
+def get_test_date_str():
+    return "03/14/2025"  # Fixed date for testing
 
 def get_game_ids_for_date(date_str):
-    retries = 3
-    for i in range(retries):
-        try:
-            scoreboard = scoreboardv2.ScoreboardV2(game_date=date_str)
-            games = scoreboard.get_normalized_dict()["GameHeader"]
-            return [game["GAME_ID"] for game in games]
-        except (requests.exceptions.ReadTimeout, Exception) as e:
-            print(f"Attempt {i+1}/{retries} failed: {e}")
-            time.sleep(2)
-    raise Exception("Failed to fetch game IDs after multiple attempts.")
+    scoreboard = scoreboardv2.ScoreboardV2(game_date=date_str)
+    games = scoreboard.get_normalized_dict()["GameHeader"]
+    return [game["GAME_ID"] for game in games]
 
 def get_stat_leaders(game_ids):
     top_points = {"name": "", "stat": 0}
@@ -109,7 +84,7 @@ def compose_tweet(date_str, points, assists, rebounds, threes, minutes):
 🏹 3PT Leader
 {threes['name']}: {threes['stat']} 3PM
 
-#NBA #NBATwitter #NBAStats #StatKingsHQ\n"""
+#NBA #NBATwitter #NBAStats #StatKingsHQ"""
     return tweet
 
 # ======================= #
@@ -117,7 +92,7 @@ def compose_tweet(date_str, points, assists, rebounds, threes, minutes):
 # ======================= #
 
 def run_bot():
-    date_str = get_nba_game_date_str()
+    date_str = get_test_date_str()
     game_ids = get_game_ids_for_date(date_str)
     if not game_ids:
         print("No games found for", date_str)
