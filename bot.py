@@ -26,7 +26,7 @@ client = tweepy.Client(
 # ======================= #
 
 def get_nba_game_date_str():
-    return "2024-11-05"  # Replace with a known game date
+    return "03/14/2025"  # Replace with a known game date
 
 
 def get_stat_leaders(date_str):
