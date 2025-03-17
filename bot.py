@@ -1,8 +1,7 @@
 import tweepy
-from datetime import datetime, timedelta
-import time
-import os
 import requests
+from datetime import datetime, timedelta
+import os
 
 # ======================= #
 # TWITTER AUTHENTICATION  #
@@ -25,40 +24,49 @@ client = tweepy.Client(
 #     NBA STATS LOGIC     #
 # ======================= #
 
-def get_nba_game_date_str():
-    return "03/14/2025"  # Replace with a known game date
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
+HEADERS = {
+    "X-RapidAPI-Key": RAPIDAPI_KEY,
+    "X-RapidAPI-Host": "api-nba-v1.p.rapidapi.com"
+}
 
+def get_nba_game_date_str():
+    est_now = datetime.utcnow() - timedelta(hours=5)  # crude UTC -> EST
+    nba_date = est_now - timedelta(days=1)
+    return nba_date.strftime("%Y-%m-%d")
 
 def get_stat_leaders(date_str):
-    formatted_date = datetime.strptime(date_str, "%m/%d/%Y").strftime("%Y-%m-%d")
-    url = f"https://www.balldontlie.io/api/v1/stats?start_date={formatted_date}&end_date={formatted_date}&per_page=100"
-    response = requests.get(url)
+    url = f"https://api-nba-v1.p.rapidapi.com/games"
+    params = {"date": date_str}
+    game_response = requests.get(url, headers=HEADERS, params=params)
+    games = game_response.json().get("response", [])
 
-    if response.status_code != 200 or not response.text:
-        raise Exception("Failed to fetch stats from BallDontLie API")
+    if not games:
+        raise Exception("No games found")
 
-    try:
-        data = response.json()
-    except Exception as e:
-        raise Exception("Invalid JSON response from BallDontLie API")
-
-    stats = data["data"]
+    player_stats = []
+    for game in games:
+        game_id = game["id"]
+        stats_url = f"https://api-nba-v1.p.rapidapi.com/players/statistics"
+        stats_params = {"game": game_id}
+        stats_resp = requests.get(stats_url, headers=HEADERS, params=stats_params)
+        player_stats.extend(stats_resp.json().get("response", []))
 
     top_points = {"name": "", "stat": 0}
     top_assists = {"name": "", "stat": 0}
     top_rebounds = {"name": "", "stat": 0}
     top_threes = {"name": "", "stat": 0}
 
-    for p in stats:
-        player_name = f"{p['player']['first_name']} {p['player']['last_name']}"
-        if p["pts"] > top_points["stat"]:
-            top_points = {"name": player_name, "stat": p["pts"]}
-        if p["ast"] > top_assists["stat"]:
-            top_assists = {"name": player_name, "stat": p["ast"]}
-        if p["reb"] > top_rebounds["stat"]:
-            top_rebounds = {"name": player_name, "stat": p["reb"]}
-        if p["fg3m"] > top_threes["stat"]:
-            top_threes = {"name": player_name, "stat": p["fg3m"]}
+    for stat in player_stats:
+        name = f"{stat['player']['firstname']} {stat['player']['lastname']}"
+        if stat["points"] > top_points["stat"]:
+            top_points = {"name": name, "stat": stat["points"]}
+        if stat["assists"] > top_assists["stat"]:
+            top_assists = {"name": name, "stat": stat["assists"]}
+        if stat["totReb"] > top_rebounds["stat"]:
+            top_rebounds = {"name": name, "stat": stat["totReb"]}
+        if stat["tpm"] > top_threes["stat"]:
+            top_threes = {"name": name, "stat": stat["tpm"]}
 
     return top_points, top_assists, top_rebounds, top_threes
 
