@@ -8,11 +8,11 @@ import os
 # ======================= #
 # TWITTER AUTHENTICATION  #
 # ======================= #
-bearer_token = os.environ.get("BEARER_TOKEN")
-api_key = os.environ.get("API_KEY")
-api_secret = os.environ.get("API_SECRET")
-access_token = os.environ.get("ACCESS_TOKEN")
-access_token_secret = os.environ.get("ACCESS_TOKEN_SECRET")
+bearer_token = "AAAAAAAAAAAAAAAAAAAAAPztzwEAAAAAvBGCjApPNyqj9c%2BG7740SkkTShs%3DTCpOQ0DMncSMhaW0OA4UTPZrPRx3BHjIxFPzRyeoyMs2KHk6hM"
+api_key = "uKyGoDr5LQbLvu9i7pgFrAnBr"
+api_secret = "KGBVtj1BUmAEsyoTmZhz67953ItQ8TIDcChSpodXV8uGMPXsoH"
+access_token = "1901441558596988929-WMdEPOtNDj7QTJgLHVylxnylI9ObgD"
+access_token_secret = "9sf83R8A0MBdijPdns6nWaG7HF47htcWo6oONPmMS7o98"
 
 client = tweepy.Client(
     bearer_token=bearer_token,
@@ -27,7 +27,7 @@ client = tweepy.Client(
 # ======================= #
 
 def get_test_date_str():
-    return "03/15/2025"  # Fixed date for testing
+    return "03/16/2025"  # Fixed date for testing
 
 def get_game_ids_for_date(date_str):
     scoreboard = scoreboardv2.ScoreboardV2(game_date=date_str)
@@ -85,7 +85,7 @@ def compose_tweet(date_str, points, assists, rebounds, threes, minutes):
 🏹 3PT Leader
 {threes['name']}: {threes['stat']} 3PM
 
-#NBA #NBATwitter #NBAStats #StatKingsHQ"""
+#NBA #NBATwitter #NBAStats #StatKingsHQ\n"""
     return tweet
 
 # ======================= #
