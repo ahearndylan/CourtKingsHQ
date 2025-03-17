@@ -1,7 +1,7 @@
 import tweepy
 from nba_api.stats.endpoints import boxscoretraditionalv2, scoreboardv2
 from nba_api.stats.library.parameters import SeasonTypeAllStar
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import os
 
@@ -26,9 +26,12 @@ client = tweepy.Client(
 #     NBA STATS LOGIC     #
 # ======================= #
 
-def get_test_date_str():
-    return "03/16/2025"  # Fixed date for testing
-
+def get_nba_game_date_str():
+    # Automatically use yesterday's date (adjusted for EST)
+    est_now = datetime.utcnow() - timedelta(hours=5)  # crude UTC->EST
+    nba_date = est_now - timedelta(days=1)
+    return nba_date.strftime("%m/%d/%Y")
+    
 def get_game_ids_for_date(date_str):
     scoreboard = scoreboardv2.ScoreboardV2(game_date=date_str)
     games = scoreboard.get_normalized_dict()["GameHeader"]
@@ -93,7 +96,7 @@ def compose_tweet(date_str, points, assists, rebounds, threes, minutes):
 # ======================= #
 
 def run_bot():
-    date_str = get_test_date_str()
+    date_str = get_nba_game_date_str()
     game_ids = get_game_ids_for_date(date_str)
     if not game_ids:
         print("No games found for", date_str)
