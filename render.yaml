@@ -1,8 +1,0 @@
-services:
-  - type: cron
-    name: statkings-bot
-    schedule: "45 5 * * *" # 12:45 AM EST (5:45 UTC)
-    env: python
-    buildCommand: ""
-    startCommand: "python bot.py"
-    branch: master

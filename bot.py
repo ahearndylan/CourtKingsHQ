@@ -8,11 +8,11 @@ import os
 # ======================= #
 # TWITTER AUTHENTICATION  #
 # ======================= #
-bearer_token = "AAAAAAAAAAAAAAAAAAAAAPztzwEAAAAAvBGCjApPNyqj9c%2BG7740SkkTShs%3DTCpOQ0DMncSMhaW0OA4UTPZrPRx3BHjIxFPzRyeoyMs2KHk6hM"
-api_key = "uKyGoDr5LQbLvu9i7pgFrAnBr"
-api_secret = "KGBVtj1BUmAEsyoTmZhz67953ItQ8TIDcChSpodXV8uGMPXsoH"
-access_token = "1901441558596988929-WMdEPOtNDj7QTJgLHVylxnylI9ObgD"
-access_token_secret = "9sf83R8A0MBdijPdns6nWaG7HF47htcWo6oONPmMS7o98"
+bearer_token = os.getenv("BEARER_TOKEN")
+api_key = os.getenv("API_KEY")
+api_secret = os.getenv("API_SECRET")
+access_token = os.getenv("ACCESS_TOKEN")
+access_token_secret = os.getenv("ACCESS_TOKEN_SECRET")
 
 client = tweepy.Client(
     bearer_token=bearer_token,
