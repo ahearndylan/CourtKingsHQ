@@ -1,17 +1,20 @@
 import tweepy
 from nba_api.stats.endpoints import boxscoretraditionalv2, scoreboardv2
 from nba_api.stats.library.parameters import SeasonTypeAllStar
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
+import os
+import requests
+from requests.exceptions import ReadTimeout
 
 # ======================= #
 # TWITTER AUTHENTICATION  #
 # ======================= #
-bearer_token = "AAAAAAAAAAAAAAAAAAAAAPztzwEAAAAAvBGCjApPNyqj9c%2BG7740SkkTShs%3DTCpOQ0DMncSMhaW0OA4UTPZrPRx3BHjIxFPzRyeoyMs2KHk6hM"
-api_key = "uKyGoDr5LQbLvu9i7pgFrAnBr"
-api_secret = "KGBVtj1BUmAEsyoTmZhz67953ItQ8TIDcChSpodXV8uGMPXsoH"
-access_token = "1901441558596988929-WMdEPOtNDj7QTJgLHVylxnylI9ObgD"
-access_token_secret = "9sf83R8A0MBdijPdns6nWaG7HF47htcWo6oONPmMS7o98"
+bearer_token = os.getenv("BEARER_TOKEN")
+api_key = os.getenv("API_KEY")
+api_secret = os.getenv("API_SECRET")
+access_token = os.getenv("ACCESS_TOKEN")
+access_token_secret = os.getenv("ACCESS_TOKEN_SECRET")
 
 client = tweepy.Client(
     bearer_token=bearer_token,
@@ -25,13 +28,31 @@ client = tweepy.Client(
 #     NBA STATS LOGIC     #
 # ======================= #
 
-def get_test_date_str():
-    return "03/14/2025"  # Fixed date for testing
+def get_nba_game_date_str():
+    # Automatically use yesterday's date (adjusted for EST)
+    est_now = datetime.utcnow() - timedelta(hours=5)  # crude UTC->EST
+    nba_date = est_now - timedelta(days=1)
+    return nba_date.strftime("%m/%d/%Y")
 
-def get_game_ids_for_date(date_str):
-    scoreboard = scoreboardv2.ScoreboardV2(game_date=date_str)
-    games = scoreboard.get_normalized_dict()["GameHeader"]
-    return [game["GAME_ID"] for game in games]
+
+def get_game_ids_for_date(date_str, max_retries=3):
+    attempt = 0
+    while attempt < max_retries:
+        try:
+            scoreboard = scoreboardv2.ScoreboardV2(game_date=date_str)
+            games = scoreboard.get_normalized_dict()["GameHeader"]
+            return [game["GAME_ID"] for game in games]
+        except (requests.exceptions.ReadTimeout, ReadTimeout):
+            print(f"Attempt {attempt + 1}/{max_retries} timed out.")
+            time.sleep(2)
+            attempt += 1
+        except Exception as e:
+            print(f"Error on attempt {attempt + 1}/{max_retries}: {e}")
+            time.sleep(2)
+            attempt += 1
+
+    raise Exception("Failed to fetch game IDs after multiple attempts.")
+
 
 def get_stat_leaders(game_ids):
     top_points = {"name": "", "stat": 0}
@@ -69,6 +90,7 @@ def get_stat_leaders(game_ids):
 
     return top_points, top_assists, top_rebounds, top_threes, top_minutes
 
+
 def compose_tweet(date_str, points, assists, rebounds, threes, minutes):
     tweet = f"""🏀 Stat Kings – {date_str}
 
@@ -84,7 +106,7 @@ def compose_tweet(date_str, points, assists, rebounds, threes, minutes):
 🏹 3PT Leader
 {threes['name']}: {threes['stat']} 3PM
 
-#NBA #NBATwitter #NBAStats #StatKingsHQ"""
+#NBA #NBATwitter #NBAStats #StatKingsHQ\n"""
     return tweet
 
 # ======================= #
@@ -92,7 +114,7 @@ def compose_tweet(date_str, points, assists, rebounds, threes, minutes):
 # ======================= #
 
 def run_bot():
-    date_str = get_test_date_str()
+    date_str = get_nba_game_date_str()
     game_ids = get_game_ids_for_date(date_str)
     if not game_ids:
         print("No games found for", date_str)
@@ -102,6 +124,7 @@ def run_bot():
     tweet = compose_tweet(date_str, points, assists, rebounds, threes, minutes)
     print("Tweeting:\n", tweet)
     client.create_tweet(text=tweet)
+
 
 if __name__ == "__main__":
     run_bot()
