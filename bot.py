@@ -25,27 +25,27 @@ client = tweepy.Client(
 #     NBA STATS LOGIC     #
 # ======================= #
 
-def get_nba_game_date_str():
-    # Convert UTC to EST (UTC-5)
-    utc_now = datetime.now(timezone.utc)
-    est_now = utc_now - timedelta(hours=5)
+def get_yesterday_date_str():
+    est_now = datetime.now(timezone.utc) - timedelta(hours=5)
+    yesterday = est_now - timedelta(days=1)
+    return yesterday.strftime("%m/%d/%Y")
 
-    # Always get the previous day's date to ensure games are finished
-    nba_date = est_now - timedelta(days=1)
-    return nba_date.strftime("%m/%d/%Y")
-
-
-def get_game_ids_for_date(date_str):
-    scoreboard = scoreboardv2.ScoreboardV2(game_date=date_str)
-    games = scoreboard.get_normalized_dict()["GameHeader"]
-    return [game["GAME_ID"] for game in games]
+def get_game_ids_for_date(date_str, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            scoreboard = scoreboardv2.ScoreboardV2(game_date=date_str)
+            games = scoreboard.get_normalized_dict()["GameHeader"]
+            return [game["GAME_ID"] for game in games]
+        except Exception as e:
+            print(f"Attempt {attempt + 1} failed: {e}")
+            time.sleep(2)
+    raise Exception("Failed to fetch game IDs after multiple attempts.")
 
 def get_stat_leaders(game_ids):
     top_points = {"name": "", "stat": 0}
     top_assists = {"name": "", "stat": 0}
     top_rebounds = {"name": "", "stat": 0}
     top_threes = {"name": "", "stat": 0}
-    top_minutes = {"name": "", "stat": 0.0}
 
     for game_id in game_ids:
         time.sleep(0.6)
@@ -53,31 +53,20 @@ def get_stat_leaders(game_ids):
         players = boxscore.get_normalized_dict()["PlayerStats"]
 
         for p in players:
+            name = p["PLAYER_NAME"]
             if p["PTS"] is not None and p["PTS"] > top_points["stat"]:
-                top_points = {"name": p["PLAYER_NAME"], "stat": p["PTS"]}
+                top_points = {"name": name, "stat": p["PTS"]}
             if p["AST"] is not None and p["AST"] > top_assists["stat"]:
-                top_assists = {"name": p["PLAYER_NAME"], "stat": p["AST"]}
+                top_assists = {"name": name, "stat": p["AST"]}
             if p["REB"] is not None and p["REB"] > top_rebounds["stat"]:
-                top_rebounds = {"name": p["PLAYER_NAME"], "stat": p["REB"]}
+                top_rebounds = {"name": name, "stat": p["REB"]}
             if p["FG3M"] is not None and p["FG3M"] > top_threes["stat"]:
-                top_threes = {"name": p["PLAYER_NAME"], "stat": p["FG3M"]}
-            if p["MIN"]:
-                try:
-                    min_val = p["MIN"]
-                    if ":" in min_val:
-                        minutes_part = min_val.split(":")[0]
-                        total_minutes = float(minutes_part)
-                    else:
-                        total_minutes = float(min_val)
-                    if total_minutes > top_minutes["stat"]:
-                        top_minutes = {"name": p["PLAYER_NAME"], "stat": round(total_minutes, 1)}
-                except:
-                    pass
+                top_threes = {"name": name, "stat": p["FG3M"]}
 
-    return top_points, top_assists, top_rebounds, top_threes, top_minutes
+    return top_points, top_assists, top_rebounds, top_threes
 
-def compose_tweet(date_str, points, assists, rebounds, threes, minutes):
-    tweet = f"""🏀 Stat Kings – {date_str}
+def compose_tweet(date_str, points, assists, rebounds, threes):
+    return f"""🏀 Stat Kings – {date_str}
 
 🔥 Points Leader
 {points['name']}: {points['stat']} PTS
@@ -92,23 +81,26 @@ def compose_tweet(date_str, points, assists, rebounds, threes, minutes):
 {threes['name']}: {threes['stat']} 3PM
 
 #NBA #NBATwitter #NBAStats #StatKingsHQ"""
-    return tweet
 
 # ======================= #
 #        MAIN BOT         #
 # ======================= #
 
 def run_bot():
-    date_str = get_nba_game_date_str()
-    game_ids = get_game_ids_for_date(date_str)
-    if not game_ids:
-        print("No games found for", date_str)
-        return
+    date_str = get_yesterday_date_str()
+    try:
+        game_ids = get_game_ids_for_date(date_str)
+        if not game_ids:
+            print("No games found for", date_str)
+            return
 
-    points, assists, rebounds, threes, minutes = get_stat_leaders(game_ids)
-    tweet = compose_tweet(date_str, points, assists, rebounds, threes, minutes)
-    print("Tweeting:\n", tweet)
-    client.create_tweet(text=tweet)
+        points, assists, rebounds, threes = get_stat_leaders(game_ids)
+        tweet = compose_tweet(date_str, points, assists, rebounds, threes)
+        print("Tweeting:\n", tweet)
+        client.create_tweet(text=tweet)
+
+    except Exception as e:
+        print("Error:", e)
 
 if __name__ == "__main__":
     run_bot()
