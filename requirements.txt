@@ -1,2 +1,2 @@
 tweepy
-requests
+nba_api
