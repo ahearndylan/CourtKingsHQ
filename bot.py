@@ -1,11 +1,8 @@
 import tweepy
-from nba_api.stats.endpoints import boxscoretraditionalv2, scoreboardv2
-from nba_api.stats.library.parameters import SeasonTypeAllStar
-from datetime import datetime, timedelta
-import time
 import os
 import requests
-from requests.exceptions import ReadTimeout
+from datetime import datetime, timedelta
+import time
 
 # ======================= #
 # TWITTER AUTHENTICATION  #
@@ -29,70 +26,56 @@ client = tweepy.Client(
 # ======================= #
 
 def get_nba_game_date_str():
-    # Automatically use yesterday's date (adjusted for EST)
-    est_now = datetime.utcnow() - timedelta(hours=5)  # crude UTC->EST
+    est_now = datetime.utcnow() - timedelta(hours=5)
     nba_date = est_now - timedelta(days=1)
-    return nba_date.strftime("%m/%d/%Y")
+    return nba_date.strftime("%Y-%m-%d")  # Format for BallDontLie
 
+def get_stat_leaders(date_str):
+    url = f"https://www.balldontlie.io/api/v1/stats?start_date={date_str}&end_date={date_str}&per_page=100"
+    leaders = {
+        "points": {"name": "", "stat": 0},
+        "assists": {"name": "", "stat": 0},
+        "rebounds": {"name": "", "stat": 0},
+        "threes": {"name": "", "stat": 0},
+        "minutes": {"name": "", "stat": 0.0}
+    }
 
-def get_game_ids_for_date(date_str, max_retries=3):
-    attempt = 0
-    while attempt < max_retries:
-        try:
-            scoreboard = scoreboardv2.ScoreboardV2(game_date=date_str)
-            games = scoreboard.get_normalized_dict()["GameHeader"]
-            return [game["GAME_ID"] for game in games]
-        except (requests.exceptions.ReadTimeout, ReadTimeout):
-            print(f"Attempt {attempt + 1}/{max_retries} timed out.")
-            time.sleep(2)
-            attempt += 1
-        except Exception as e:
-            print(f"Error on attempt {attempt + 1}/{max_retries}: {e}")
-            time.sleep(2)
-            attempt += 1
+    page = 1
+    while True:
+        response = requests.get(url + f"&page={page}")
+        data = response.json()
+        stats = data["data"]
 
-    raise Exception("Failed to fetch game IDs after multiple attempts.")
+        if not stats:
+            break
 
-
-def get_stat_leaders(game_ids):
-    top_points = {"name": "", "stat": 0}
-    top_assists = {"name": "", "stat": 0}
-    top_rebounds = {"name": "", "stat": 0}
-    top_threes = {"name": "", "stat": 0}
-    top_minutes = {"name": "", "stat": 0.0}
-
-    for game_id in game_ids:
-        time.sleep(0.6)
-        boxscore = boxscoretraditionalv2.BoxScoreTraditionalV2(game_id=game_id)
-        players = boxscore.get_normalized_dict()["PlayerStats"]
-
-        for p in players:
-            if p["PTS"] is not None and p["PTS"] > top_points["stat"]:
-                top_points = {"name": p["PLAYER_NAME"], "stat": p["PTS"]}
-            if p["AST"] is not None and p["AST"] > top_assists["stat"]:
-                top_assists = {"name": p["PLAYER_NAME"], "stat": p["AST"]}
-            if p["REB"] is not None and p["REB"] > top_rebounds["stat"]:
-                top_rebounds = {"name": p["PLAYER_NAME"], "stat": p["REB"]}
-            if p["FG3M"] is not None and p["FG3M"] > top_threes["stat"]:
-                top_threes = {"name": p["PLAYER_NAME"], "stat": p["FG3M"]}
-            if p["MIN"]:
+        for p in stats:
+            player_name = f"{p['player']['first_name']} {p['player']['last_name']}"
+            if p["pts"] > leaders["points"]["stat"]:
+                leaders["points"] = {"name": player_name, "stat": p["pts"]}
+            if p["ast"] > leaders["assists"]["stat"]:
+                leaders["assists"] = {"name": player_name, "stat": p["ast"]}
+            if p["reb"] > leaders["rebounds"]["stat"]:
+                leaders["rebounds"] = {"name": player_name, "stat": p["reb"]}
+            if p["fg3m"] > leaders["threes"]["stat"]:
+                leaders["threes"] = {"name": player_name, "stat": p["fg3m"]}
+            if p["min"]:
                 try:
-                    min_val = p["MIN"]
-                    if ":" in min_val:
-                        minutes_part = min_val.split(":")[0]
-                        total_minutes = float(minutes_part)
-                    else:
-                        total_minutes = float(min_val)
-                    if total_minutes > top_minutes["stat"]:
-                        top_minutes = {"name": p["PLAYER_NAME"], "stat": round(total_minutes, 1)}
+                    minutes = float(p["min"].split(":")[0]) if ":" in p["min"] else float(p["min"])
+                    if minutes > leaders["minutes"]["stat"]:
+                        leaders["minutes"] = {"name": player_name, "stat": round(minutes, 1)}
                 except:
                     pass
 
-    return top_points, top_assists, top_rebounds, top_threes, top_minutes
+        if not data["meta"]["next_page"]:
+            break
+        page += 1
+        time.sleep(0.4)  # Friendly API usage
 
+    return leaders["points"], leaders["assists"], leaders["rebounds"], leaders["threes"], leaders["minutes"]
 
 def compose_tweet(date_str, points, assists, rebounds, threes, minutes):
-    tweet = f"""🏀 Stat Kings – {date_str}
+    tweet = f"""🏀 Stat Kings – {datetime.strptime(date_str, '%Y-%m-%d').strftime('%m/%d/%Y')}
 
 🔥 Points Leader
 {points['name']}: {points['stat']} PTS
@@ -115,16 +98,10 @@ def compose_tweet(date_str, points, assists, rebounds, threes, minutes):
 
 def run_bot():
     date_str = get_nba_game_date_str()
-    game_ids = get_game_ids_for_date(date_str)
-    if not game_ids:
-        print("No games found for", date_str)
-        return
-
-    points, assists, rebounds, threes, minutes = get_stat_leaders(game_ids)
+    points, assists, rebounds, threes, minutes = get_stat_leaders(date_str)
     tweet = compose_tweet(date_str, points, assists, rebounds, threes, minutes)
     print("Tweeting:\n", tweet)
     client.create_tweet(text=tweet)
-
 
 if __name__ == "__main__":
     run_bot()
