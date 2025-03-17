@@ -26,9 +26,8 @@ client = tweepy.Client(
 # ======================= #
 
 def get_nba_game_date_str():
-    est_now = datetime.utcnow() - timedelta(hours=5)
-    nba_date = est_now - timedelta(days=1)
-    return nba_date.strftime("%m/%d/%Y")
+    return "2024-11-05"  # Replace with a known game date
+
 
 def get_stat_leaders(date_str):
     formatted_date = datetime.strptime(date_str, "%m/%d/%Y").strftime("%Y-%m-%d")
