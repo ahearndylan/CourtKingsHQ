@@ -26,7 +26,7 @@ client = tweepy.Client(
 # ======================= #
 
 def get_yesterday_date_str():
-    est_now = datetime.now(timezone.utc) - timedelta(hours=5)
+    est_now = datetime.now(timezone.utc) - timedelta(hours=4)
     yesterday = est_now - timedelta(days=1)
     return yesterday.strftime("%m/%d/%Y")
 
@@ -42,10 +42,10 @@ def get_game_ids_for_date(date_str, max_retries=3):
     raise Exception("Failed to fetch game IDs after multiple attempts.")
 
 def get_stat_leaders(game_ids):
-    top_points = {"name": "", "stat": 0}
-    top_assists = {"name": "", "stat": 0}
-    top_rebounds = {"name": "", "stat": 0}
-    top_threes = {"name": "", "stat": 0}
+    top_points = {"name": "", "stat": 0, "team": ""}
+    top_assists = {"name": "", "stat": 0, "team": ""}
+    top_rebounds = {"name": "", "stat": 0, "team": ""}
+    top_threes = {"name": "", "stat": 0, "team": ""}
 
     for game_id in game_ids:
         time.sleep(0.6)
@@ -54,14 +54,15 @@ def get_stat_leaders(game_ids):
 
         for p in players:
             name = p["PLAYER_NAME"]
+            team = p["TEAM_ABBREVIATION"]
             if p["PTS"] is not None and p["PTS"] > top_points["stat"]:
-                top_points = {"name": name, "stat": p["PTS"]}
+                top_points = {"name": name, "stat": p["PTS"], "team": team}
             if p["AST"] is not None and p["AST"] > top_assists["stat"]:
-                top_assists = {"name": name, "stat": p["AST"]}
+                top_assists = {"name": name, "stat": p["AST"], "team": team}
             if p["REB"] is not None and p["REB"] > top_rebounds["stat"]:
-                top_rebounds = {"name": name, "stat": p["REB"]}
+                top_rebounds = {"name": name, "stat": p["REB"], "team": team}
             if p["FG3M"] is not None and p["FG3M"] > top_threes["stat"]:
-                top_threes = {"name": name, "stat": p["FG3M"]}
+                top_threes = {"name": name, "stat": p["FG3M"], "team": team}
 
     return top_points, top_assists, top_rebounds, top_threes
 
@@ -69,18 +70,18 @@ def compose_tweet(date_str, points, assists, rebounds, threes):
     return f"""🏀 Stat Kings – {date_str}
 
 🔥 Points Leader
-{points['name']}: {points['stat']} PTS
+{points['name']} ({points['team']}): {points['stat']} PTS
 
 🎯 Assists Leader
-{assists['name']}: {assists['stat']} AST
+{assists['name']} ({assists['team']}): {assists['stat']} AST
 
 💪 Rebounds Leader
-{rebounds['name']}: {rebounds['stat']} REB
+{rebounds['name']} ({rebounds['team']}): {rebounds['stat']} REB
 
 🏹 3PT Leader
-{threes['name']}: {threes['stat']} 3PM
+{threes['name']} ({threes['team']}): {threes['stat']} 3PM
 
-#NBA #NBATwitter #NBAStats #StatKingsHQ"""
+#NBA #NBAStats #StatKingsHQ"""
 
 # ======================= #
 #        MAIN BOT         #
