@@ -3,7 +3,7 @@ from nba_api.stats.endpoints import boxscoretraditionalv2, scoreboardv2
 from datetime import datetime, timedelta, timezone
 import time
 import os
-import json
+from supabase import create_client
 
 # ======================= #
 # TWITTER AUTHENTICATION  #
@@ -23,13 +23,20 @@ client = tweepy.Client(
 )
 
 # ======================= #
+#  SUPABASE CONNECTION   #
+# ======================= #
+supabase_url = "https://fjtxowbjnxclzcogostk.supabase.co"
+supabase_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdHhvd2JqbnhjbHpjb2dvc3RrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2MDE5NTgsImV4cCI6MjA1ODE3Nzk1OH0.LPkFw-UX6io0F3j18Eefd1LmeAGGXnxL4VcCLOR_c1Q"
+supabase = create_client(supabase_url, supabase_key)
+
+# ======================= #
 #     NBA STATS LOGIC     #
 # ======================= #
 
 def get_yesterday_date_str():
     est_now = datetime.now(timezone.utc) - timedelta(hours=4)
     yesterday = est_now - timedelta(days=1)
-    return yesterday.strftime("%m/%d/%Y")
+    return yesterday.strftime("%Y-%m-%d")  # Use YYYY-MM-DD format for database
 
 def get_game_ids_for_date(date_str, max_retries=3):
     for attempt in range(max_retries):
@@ -43,10 +50,10 @@ def get_game_ids_for_date(date_str, max_retries=3):
     raise Exception("Failed to fetch game IDs after multiple attempts.")
 
 def get_stat_leaders(game_ids):
-    top_points = {"name": "", "stat": 0, "team": ""}
-    top_assists = {"name": "", "stat": 0, "team": ""}
-    top_rebounds = {"name": "", "stat": 0, "team": ""}
-    top_threes = {"name": "", "stat": 0, "team": ""}
+    top_points = {"player": "", "team": "", "value": 0}
+    top_assists = {"player": "", "team": "", "value": 0}
+    top_rebounds = {"player": "", "team": "", "value": 0}
+    top_threes = {"player": "", "team": "", "value": 0}
 
     for game_id in game_ids:
         time.sleep(0.6)
@@ -56,14 +63,14 @@ def get_stat_leaders(game_ids):
         for p in players:
             name = p["PLAYER_NAME"]
             team = p["TEAM_ABBREVIATION"]
-            if p["PTS"] is not None and p["PTS"] > top_points["stat"]:
-                top_points = {"name": name, "stat": p["PTS"], "team": team}
-            if p["AST"] is not None and p["AST"] > top_assists["stat"]:
-                top_assists = {"name": name, "stat": p["AST"], "team": team}
-            if p["REB"] is not None and p["REB"] > top_rebounds["stat"]:
-                top_rebounds = {"name": name, "stat": p["REB"], "team": team}
-            if p["FG3M"] is not None and p["FG3M"] > top_threes["stat"]:
-                top_threes = {"name": name, "stat": p["FG3M"], "team": team}
+            if p["PTS"] is not None and p["PTS"] > top_points["value"]:
+                top_points = {"player": name, "team": team, "value": p["PTS"]}
+            if p["AST"] is not None and p["AST"] > top_assists["value"]:
+                top_assists = {"player": name, "team": team, "value": p["AST"]}
+            if p["REB"] is not None and p["REB"] > top_rebounds["value"]:
+                top_rebounds = {"player": name, "team": team, "value": p["REB"]}
+            if p["FG3M"] is not None and p["FG3M"] > top_threes["value"]:
+                top_threes = {"player": name, "team": team, "value": p["FG3M"]}
 
     return top_points, top_assists, top_rebounds, top_threes
 
@@ -71,70 +78,40 @@ def compose_tweet(date_str, points, assists, rebounds, threes):
     return f"""🏀 Stat Kings – {date_str}
 
 🔥 Points Leader
-{points['name']} ({points['team']}): {points['stat']} PTS
+{points['player']} ({points['team']}): {points['value']} PTS
 
 🎯 Assists Leader
-{assists['name']} ({assists['team']}): {assists['stat']} AST
+{assists['player']} ({assists['team']}): {assists['value']} AST
 
 💪 Rebounds Leader
-{rebounds['name']} ({rebounds['team']}): {rebounds['stat']} REB
+{rebounds['player']} ({rebounds['team']}): {rebounds['value']} REB
 
 🏹 3PT Leader
-{threes['name']} ({threes['team']}): {threes['stat']} 3PM
+{threes['player']} ({threes['team']}): {threes['value']} 3PM
 
 #NBA #NBAStats #StatKingsHQ"""
 
 # ============================= #
-#   SAVE JSON FOR HTML DISPLAY #
+#   SAVE STATS TO SUPABASE      #
 # ============================= #
 
-def update_leaders_json(date_str, points, assists, rebounds, threes, path="stats.json"):
-    today_data = {
+def update_leaders_to_db(date_str, points, assists, rebounds, threes):
+    payload = {
         "date": date_str,
-        "points": {
-            "player": points["name"],
-            "team": points["team"],
-            "value": points["stat"]
-        },
-        "assists": {
-            "player": assists["name"],
-            "team": assists["team"],
-            "value": assists["stat"]
-        },
-        "rebounds": {
-            "player": rebounds["name"],
-            "team": rebounds["team"],
-            "value": rebounds["stat"]
-        },
-        "threept": {
-            "player": threes["name"],
-            "team": threes["team"],
-            "value": threes["stat"]
+        "data": {
+            "points": points,
+            "assists": assists,
+            "rebounds": rebounds,
+            "threept": threes
         }
     }
 
     try:
-        if os.path.exists(path):
-            with open(path, "r") as f:
-                data = json.load(f)
-        else:
-            data = {"nights": []}
-
-        # Remove existing entry for this date (avoid duplicates)
-        data["nights"] = [d for d in data["nights"] if d["date"] != date_str]
-
-        # Insert newest data at the top
-        data["nights"].insert(0, today_data)
-
-        # Keep only last 3 nights
-        data["nights"] = data["nights"][:3]
-
-        with open(path, "w") as f:
-            json.dump(data, f, indent=2)
-
-        print(f"✅ Updated {path} with {date_str} leaders.")
+        # Upsert data into Supabase table "nightlykings" (overwrite if same date exists)
+        response = supabase.table("nightlykings").upsert(payload, on_conflict="date").execute()
+        print("✅ Supabase updated:", response)
     except Exception as e:
-        print("❌ Error writing stats.json:", e)
+        print("❌ Supabase write error:", e)
 
 # ======================= #
 #        MAIN BOT         #
@@ -153,8 +130,8 @@ def run_bot():
         print("Tweeting:\n", tweet)
         client.create_tweet(text=tweet)
 
-        # Save JSON for website use
-        update_leaders_json(date_str, points, assists, rebounds, threes)
+        # Save stats to Supabase
+        update_leaders_to_db(date_str, points, assists, rebounds, threes)
 
     except Exception as e:
         print("Error:", e)

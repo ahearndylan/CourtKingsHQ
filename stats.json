@@ -1,6 +1,12 @@
 {
     "nights": [
       {
+        "date": "2025-03-21",
+        "points": { "player": "Kevin Durant", "team": "PHX", "value": 42 },
+        "assists": { "player": "Stephon Caste", "team": "SAS", "value": 14 },
+        "rebounds": { "player": "Kel'el Ware", "team": "MIA", "value": 14 },
+        "threept": { "player": "Fred VanVleet", "team": "HOU", "value": 9 }
+      },{
         "date": "2025-03-20",
         "points": { "player": "Bennedict Mathurin", "team": "IND", "value": 28 },
         "assists": { "player": "LaMelo Ball", "team": "CHA", "value": 8 },
