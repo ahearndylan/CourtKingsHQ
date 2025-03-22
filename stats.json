@@ -1,0 +1,47 @@
+{
+    "nights": [
+      {
+        "date": "2025-03-20",
+        "points": { "player": "Bennedict Mathurin", "team": "IND", "value": 28 },
+        "assists": { "player": "LaMelo Ball", "team": "CHA", "value": 8 },
+        "rebounds": { "player": "Bennedict Mathurin", "team": "IND", "value": 16 },
+        "threept": { "player": "Ziaire Williams", "team": "BKN", "value": 6 }
+      },
+      {
+        "date": "2025-03-19",
+        "points": { "player": "Devin Booker", "team": "PHX", "value": 41 },
+        "assists": { "player": "Spencer Dinwiddie", "team": "DAL", "value": 12 },
+        "rebounds": { "player": "Jaylin Williams", "team": "OKC", "value": 17 },
+        "threept": { "player": "Sandro Mamukelashvili", "team": "SAS", "value": 7 }
+      },
+      {
+        "date": "2025-03-18",
+        "points": { "player": "Trae Young", "team": "ATL", "value": 31 },
+        "assists": { "player": "Trae Young", "team": "ATL", "value": 8 },
+        "rebounds": { "player": "Kristaps Porziņģis", "team": "BOS", "value": 13 },
+        "threept": { "player": "Baylor Scheierman", "team": "BOS", "value": 6 }
+      },
+      {
+        "date": "2025-03-17",
+        "points": { "player": "Quentin Grimes", "team": "PHI", "value": 46 },
+        "assists": { "player": "Russell Westbrook", "team": "DEN", "value": 16 },
+        "rebounds": { "player": "Josh Hart", "team": "NYK", "value": 13 },
+        "threept": { "player": "Quentin Grimes", "team": "PHI", "value": 8 }
+      },
+      {
+        "date": "2025-03-16",
+        "points": { "player": "Anthony Edwards", "team": "MIN", "value": 41 },
+        "assists": { "player": "Trae Young", "team": "ATL", "value": 12 },
+        "rebounds": { "player": "Walker Kessler", "team": "UTA", "value": 19 },
+        "threept": { "player": "Anfernee Simons", "team": "POR", "value": 6 }
+      },
+      {
+        "date": "2025-03-15",
+        "points": { "player": "Shai Gilgeous-Alexander", "team": "OKC", "value": 48 },
+        "assists": { "player": "Tyrese Haliburton", "team": "IND", "value": 15 },
+        "rebounds": { "player": "Day'Ron Sharpe", "team": "BKN", "value": 16 },
+        "threept": { "player": "Aaron Nesmith", "team": "IND", "value": 6 }
+      }
+    ]
+  }
+  

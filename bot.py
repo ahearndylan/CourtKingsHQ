@@ -3,6 +3,7 @@ from nba_api.stats.endpoints import boxscoretraditionalv2, scoreboardv2
 from datetime import datetime, timedelta, timezone
 import time
 import os
+import json
 
 # ======================= #
 # TWITTER AUTHENTICATION  #
@@ -83,6 +84,58 @@ def compose_tweet(date_str, points, assists, rebounds, threes):
 
 #NBA #NBAStats #StatKingsHQ"""
 
+# ============================= #
+#   SAVE JSON FOR HTML DISPLAY #
+# ============================= #
+
+def update_leaders_json(date_str, points, assists, rebounds, threes, path="stats.json"):
+    today_data = {
+        "date": date_str,
+        "points": {
+            "player": points["name"],
+            "team": points["team"],
+            "value": points["stat"]
+        },
+        "assists": {
+            "player": assists["name"],
+            "team": assists["team"],
+            "value": assists["stat"]
+        },
+        "rebounds": {
+            "player": rebounds["name"],
+            "team": rebounds["team"],
+            "value": rebounds["stat"]
+        },
+        "threept": {
+            "player": threes["name"],
+            "team": threes["team"],
+            "value": threes["stat"]
+        }
+    }
+
+    try:
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                data = json.load(f)
+        else:
+            data = {"nights": []}
+
+        # Remove existing entry for this date (avoid duplicates)
+        data["nights"] = [d for d in data["nights"] if d["date"] != date_str]
+
+        # Insert newest data at the top
+        data["nights"].insert(0, today_data)
+
+        # Keep only last 3 nights
+        data["nights"] = data["nights"][:3]
+
+        with open(path, "w") as f:
+            json.dump(data, f, indent=2)
+
+        print(f"✅ Updated {path} with {date_str} leaders.")
+    except Exception as e:
+        print("❌ Error writing stats.json:", e)
+
 # ======================= #
 #        MAIN BOT         #
 # ======================= #
@@ -99,6 +152,9 @@ def run_bot():
         tweet = compose_tweet(date_str, points, assists, rebounds, threes)
         print("Tweeting:\n", tweet)
         client.create_tweet(text=tweet)
+
+        # Save JSON for website use
+        update_leaders_json(date_str, points, assists, rebounds, threes)
 
     except Exception as e:
         print("Error:", e)
