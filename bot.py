@@ -75,7 +75,9 @@ def get_stat_leaders(game_ids):
     return top_points, top_assists, top_rebounds, top_threes
 
 def compose_tweet(date_str, points, assists, rebounds, threes):
-    return f"""🏀 Stat Kings – {date_str}
+    formatted_date = datetime.strptime(date_str, "%Y-%m-%d").strftime("%m/%d/%Y")
+
+    return f"""🏀 Stat Kings – {formatted_date}
 
 🔥 Points Leader
 {points['player']} ({points['team']}): {points['value']} PTS
