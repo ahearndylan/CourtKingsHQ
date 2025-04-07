@@ -77,7 +77,7 @@ def get_stat_leaders(game_ids):
 def compose_tweet(date_str, points, assists, rebounds, threes):
     formatted_date = datetime.strptime(date_str, "%Y-%m-%d").strftime("%m/%d/%Y")
 
-    return f"""🏀 Stat Kings – {formatted_date}
+    return f"""🏀 Court Kings – {formatted_date}
 
 🔥 Points Leader
 {points['player']} ({points['team']}): {points['value']} PTS
@@ -91,7 +91,7 @@ def compose_tweet(date_str, points, assists, rebounds, threes):
 🏹 3PT Leader
 {threes['player']} ({threes['team']}): {threes['value']} 3PM
 
-#NBA #NBAStats #StatKingsHQ"""
+#NBA #NBAStats #CourtKingsHQ"""
 
 # ============================= #
 #   SAVE STATS TO SUPABASE      #
