@@ -115,6 +115,7 @@ def update_leaders_to_db(date_str, points, assists, rebounds, threes):
     except Exception as e:
         print("❌ Supabase write error:", e)
 
+
 # ======================= #
 #        MAIN BOT         #
 # ======================= #
